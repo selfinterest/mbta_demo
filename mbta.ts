@@ -8,7 +8,7 @@ interface MbtaPredictionResult {
     data: {
         attributes: {
             departure_time: string;
-            
+            stop_sequence: number;
         },
         relationships: {
             route: {
@@ -38,9 +38,9 @@ const getPredictions = async () => {
 app.use( async ctx => {
     const predictions: MbtaPredictionResult = await getPredictions();
 
-    // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route
+    // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
     const route71Predictions = predictions.data.filter( prediction => {
-        return prediction.relationships.route.data.id === "71"
+        return prediction.relationships.route.data.id === "71" && prediction.attributes.stop_sequence === 1;
     });
 
 
@@ -70,7 +70,7 @@ app.use( async ctx => {
         return 0;
     });
     
-    const departureTimesAsLocalizedString = departureTimesJS.map ( departure => departure.toString());
+    const departureTimesAsLocalizedString = departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
 
     ctx.body = departureTimesAsLocalizedString;
 
