@@ -2,24 +2,6 @@
 
 import request = require("request-promise");
 import Koa = require("koa");
-import moment = require("moment");
-
-interface MbtaPredictionResult {
-    data: {
-        attributes: {
-            departure_time: string;
-            stop_sequence: number;
-        },
-        relationships: {
-            route: {
-                data: {
-                    id: string;
-                    type: "route"
-                }
-            }
-        }
-    }[]
-}
 
 const API_URL = "https://api-v3.mbta.com";
 const watertownLat = "42.36546";
@@ -36,43 +18,7 @@ const getPredictions = async () => {
 
 
 app.use( async ctx => {
-    const predictions: MbtaPredictionResult = await getPredictions();
-
-    // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
-    const route71Predictions = predictions.data.filter( prediction => {
-        return prediction.relationships.route.data.id === "71" && prediction.attributes.stop_sequence === 1;
-    });
-
-
-    // map just the departure times
-    let departureTimes = route71Predictions.map( prediction => {
-        return prediction.attributes.departure_time
-    });
-
-    // filter out the nulls. We want to ignore the last bus of the night (because it doesn't actually _depart_)
-    departureTimes = departureTimes.filter( departure => departure);
-
-    let departureTimesJS: moment.Moment[];
-
-    // Conver all the times from ISO to moment date objects for better sorting and display
-    departureTimesJS = departureTimes.map ( departure => {
-        return moment(departure);
-    })
-
-    // sort the list of arrival times
-    departureTimesJS.sort( (date1, date2) => {
-        if(date1.isBefore(date2)) {
-            return -1;
-        } else if (date1.isAfter(date2)) {
-            return 1;
-        }
-
-        return 0;
-    });
-    
-    const departureTimesAsLocalizedString = departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
-
-    ctx.body = departureTimesAsLocalizedString;
+    ctx.body = await getPredictions();
 
 })
 
