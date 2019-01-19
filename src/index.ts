@@ -21,26 +21,25 @@ interface MbtaPredictionResult {
     }[]
 }
 
-const API_URL = "https://api-v3.mbta.com";
-const watertownLat = "42.36546";            // approx. latitude of the Watertown Square stop
-const watertownLong = "-71.18564";          // approx. longitude of the Watertown Square stop
+const MBTA_API_URL = "https://api-v3.mbta.com";
+const CENSUS_API_URL = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress";
 const routeNumber = "71";                   // the number of the Watertown -> Harvard route 
 
+const watertownLong = "-71.19103";
+const watertownLat = "42.366074";
 const app = new Koa();
 
 
 const getPredictions = async () => {
     const url = `/predictions?filter[latitude]=${watertownLat}&filter[longitude]=${watertownLong}&include=stop,route,trip,schedule`
-    const data = await request(API_URL + url);
+    const data = await request(MBTA_API_URL + url);
     return JSON.parse(data);
 }
 
+const formatPredictions = (predictions: MbtaPredictionResult) => {
+        // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
 
 
-app.use( async ctx => {
-    const predictions: MbtaPredictionResult = await getPredictions();
-
-    // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
     const route71Predictions = predictions.data.filter( prediction => {
         return prediction.relationships.route.data.id === routeNumber && prediction.attributes.stop_sequence === 1;
     });
@@ -74,10 +73,13 @@ app.use( async ctx => {
     });
 
     // map departure times to nice looking localized strings for better display
-    const departureTimesAsLocalizedString = departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
+    return departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
+}
 
-    
-    ctx.body = departureTimesAsLocalizedString;
+
+app.use( async ctx => {
+    const predictions: MbtaPredictionResult = await getPredictions();    
+    ctx.body = formatPredictions(predictions);
 
 })
 
