@@ -1,23 +1,36 @@
 {
-  "name": "application",
+  "name": "mbta_demo_application",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "mbta.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "tsc": "tsc",
+    "start": "nodemon",
+    "start:dev": "nodemon --watch 'src/**/*.ts' --ignore 'src/**/*.spec.ts' --exec 'ts-node' src/index.ts",
+    "test-watch": "cross-env NODE_ENV=test mocha --recursive -r ts-node/register \"src/**/*.spec.ts\" --watch --watch-extensions ts",
+    "test": "cross-env NODE_ENV=test nyc mocha --recursive --exit -r ts-node/register \"src/**/*.spec.ts\""
   },
   "keywords": [],
-  "author": "",
+  "author": "Katey Watson <kimbrulee38@gmail.com>",
   "license": "ISC",
+  "private": true,
   "dependencies": {
+    "cross-env": "^5.2.0",
     "koa": "^2.6.2",
     "moment": "^2.23.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.2"
   },
   "devDependencies": {
+    "@types/chai": "^4.1.7",
     "@types/koa": "^2.0.48",
+    "@types/mocha": "^5.2.5",
     "@types/request": "^2.48.1",
-    "@types/request-promise": "^4.1.42"
+    "@types/request-promise": "^4.1.42",
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "nodemon": "^1.18.9",
+    "nyc": "^13.1.0",
+    "typescript": "^3.2.4"
   }
 }
