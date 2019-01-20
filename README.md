@@ -19,3 +19,12 @@ There are a few different run scripts in the `package.json` file.
 
 `npm run build` will run the TypeScript compiler over the code and produce a bundle of plain JavaScript that can be run directly using NodeJs. The bundle will be set up in `/dist` directory.
 
+Just for fun, there's an included Dockerfile. It could be used as follows:
+```
+$ docker build . -t mbta
+$ docker run -p 8222:8222 -d mbta:latest
+```
+
+TODO
+---------
+Tests
