@@ -3,8 +3,10 @@
 import request = require("request-promise");
 import Koa = require("koa");
 import moment = require("moment");
+import pug = require("pug");
+import fs = require("fs");
 
-interface MbtaPredictionResult {
+export interface MbtaPredictionResult {
     data: {
         attributes: {
             departure_time: string;
@@ -21,28 +23,36 @@ interface MbtaPredictionResult {
     }[]
 }
 
-const API_URL = "https://api-v3.mbta.com";
-const watertownLat = "42.36546";            // approx. latitude of the Watertown Square stop
-const watertownLong = "-71.18564";          // approx. longitude of the Watertown Square stop
+export const MBTA_API_URL = "https://api-v3.mbta.com";
+
+// Coordinates of Watertown Square (approx.)
+const watertownCoords = {
+    latitude: "42.36546",
+    longitude: "-71.18564"
+}
 const routeNumber = "71";                   // the number of the Watertown -> Harvard route 
+
+// Read template from file and compile
+const template = pug.compile(fs.readFileSync(__dirname + "/assets/view.pug", {encoding: "utf8"}));
 
 const app = new Koa();
 
 
-const getPredictions = async () => {
-    const url = `/predictions?filter[latitude]=${watertownLat}&filter[longitude]=${watertownLong}&include=stop,route,trip,schedule`
-    const data = await request(API_URL + url);
-    return JSON.parse(data);
+const getPredictions = async ( {latitude, longitude}: {latitude: string, longitude: string})  => {
+    return getJson<MbtaPredictionResult>(`${MBTA_API_URL}/predictions?filter[latitude]=${latitude}&filter[longitude]=${longitude}&include=stop,route,trip,schedule`)
 }
 
 
+const getJson = async<T> (url: string) => {
+    return await request(url, {json: true}) as T;
+}
 
-app.use( async ctx => {
-    const predictions: MbtaPredictionResult = await getPredictions();
+const formatPredictions = (predictions: MbtaPredictionResult, filteredRouteNumber = routeNumber) => {
+        // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
 
-    // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
+
     const route71Predictions = predictions.data.filter( prediction => {
-        return prediction.relationships.route.data.id === routeNumber && prediction.attributes.stop_sequence === 1;
+        return prediction.relationships.route.data.id === filteredRouteNumber && prediction.attributes.stop_sequence === 1;
     });
 
 
@@ -74,10 +84,17 @@ app.use( async ctx => {
     });
 
     // map departure times to nice looking localized strings for better display
-    const departureTimesAsLocalizedString = departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
+    return departureTimesJS.map ( departure => departure.format('dddd, MMMM Do YYYY, h:mm:ss a'));
+}
 
-    
-    ctx.body = departureTimesAsLocalizedString;
+
+app.use( async ctx => {
+    // Get predictions from mbta API and reformat as a list of dates
+    const predictions: MbtaPredictionResult = await getPredictions(watertownCoords);
+    const formatedPredictions: string[] = formatPredictions(predictions);
+
+    // Read template from file, compile, and inject dates
+    ctx.body = template({dates: formatedPredictions});
 
 })
 
