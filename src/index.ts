@@ -4,7 +4,7 @@ import request = require("request-promise");
 import Koa = require("koa");
 import moment = require("moment");
 
-interface MbtaPredictionResult {
+export interface MbtaPredictionResult {
     data: {
         attributes: {
             departure_time: string;
@@ -21,27 +21,48 @@ interface MbtaPredictionResult {
     }[]
 }
 
+export interface CensusGeocodingResult {
+    result: {
+        addressMatches: [
+            {
+                matchedAddress: string;
+                coordinates: {
+                    x: number;
+                    y: number;
+                }
+            }
+        ]    
+    }
+}
+
 const MBTA_API_URL = "https://api-v3.mbta.com";
-const CENSUS_API_URL = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress";
+const CENSUS_API_URL = "https://geocoding.geo.census.gov";
+
+const someAddress = '120 Pleasant St Watertown MA';
+
 const routeNumber = "71";                   // the number of the Watertown -> Harvard route 
 
-const watertownLong = "-71.19103";
-const watertownLat = "42.366074";
 const app = new Koa();
 
 
-const getPredictions = async () => {
-    const url = `/predictions?filter[latitude]=${watertownLat}&filter[longitude]=${watertownLong}&include=stop,route,trip,schedule`
-    const data = await request(MBTA_API_URL + url);
-    return JSON.parse(data);
+const getPredictions = async ( {latitude, longitude}: {latitude: string, longitude: string})  => {
+    return getJson(`${MBTA_API_URL}/predictions?filter[latitude]=${latitude}&filter[longitude]=${longitude}&include=stop,route,trip,schedule`)
 }
 
-const formatPredictions = (predictions: MbtaPredictionResult) => {
+const getGeocodeData = async (address = someAddress) => { 
+    return getJson(`${CENSUS_API_URL}/geocoder/locations/onelineaddress?address=${encodeURIComponent(address)}&format=json&benchmark=Public_AR_Current`);
+}
+
+const getJson = async (url: string) => {
+    return await request(url, {json: true});
+}
+
+const formatPredictions = (predictions: MbtaPredictionResult, filteredRouteNumber = routeNumber) => {
         // predictions is a giant object. We only care about route 71, the Watertown -> Harvard route, and only the first stop, where I get on
 
 
     const route71Predictions = predictions.data.filter( prediction => {
-        return prediction.relationships.route.data.id === routeNumber && prediction.attributes.stop_sequence === 1;
+        return prediction.relationships.route.data.id === filteredRouteNumber && prediction.attributes.stop_sequence === 1;
     });
 
 
@@ -78,7 +99,18 @@ const formatPredictions = (predictions: MbtaPredictionResult) => {
 
 
 app.use( async ctx => {
-    const predictions: MbtaPredictionResult = await getPredictions();    
+    // First get the lat longitude of Watertown SQ from census data
+    const geoCodeData: CensusGeocodingResult = await getGeocodeData(ctx.query.address);
+
+    if(!geoCodeData.result.addressMatches || !geoCodeData.result.addressMatches.length) {
+        ctx.throw(404, "Could not find address");
+    }
+
+    const latitude = geoCodeData.result.addressMatches[0].coordinates.y.toString();
+    const longitude = geoCodeData.result.addressMatches[0].coordinates.x.toString();
+
+    const predictions: MbtaPredictionResult = await getPredictions({latitude, longitude});    
+    
     ctx.body = formatPredictions(predictions);
 
 })
