@@ -7,7 +7,9 @@
     "tsc": "tsc",
     "start": "nodemon",
     "test-watch": "cross-env NODE_ENV=test mocha --recursive -r ts-node/register \"src/**/*.spec.ts\" --watch --watch-extensions ts",
-    "test": "cross-env NODE_ENV=test nyc mocha --recursive --exit -r ts-node/register \"src/**/*.spec.ts\""
+    "test": "cross-env NODE_ENV=test nyc mocha --recursive --exit -r ts-node/register \"src/**/*.spec.ts\"",
+    "build": "tsc",
+    "postbuild": "cp -r src/assets dist"
   },
   "keywords": [],
   "author": "Katey Watson <kimbrulee38@gmail.com>",
@@ -17,6 +19,8 @@
     "koa": "^2.6.2",
     "moment": "^2.23.0",
     "pug": "^2.0.3",
+    "react": "^16.7.0",
+    "react-dom": "^16.7.0",
     "request": "^2.88.0",
     "request-promise": "^4.2.2"
   },
@@ -25,9 +29,12 @@
     "@types/koa": "^2.0.48",
     "@types/mocha": "^5.2.5",
     "@types/pug": "^2.0.4",
+    "@types/react": "^16.7.20",
+    "@types/react-dom": "^16.0.11",
     "@types/request": "^2.48.1",
     "@types/request-promise": "^4.1.42",
     "chai": "^4.2.0",
+    "copyfiles": "^2.1.0",
     "cross-env": "^5.2.0",
     "mocha": "^5.2.0",
     "nodemon": "^1.18.9",

@@ -3,7 +3,8 @@
 import request = require("request-promise");
 import Koa = require("koa");
 import moment = require("moment");
-import jade = require("jade");
+import pug = require("pug");
+import fs = require("fs");
 
 export interface MbtaPredictionResult {
     data: {
@@ -30,6 +31,9 @@ const watertownCoords = {
     longitude: "-71.18564"
 }
 const routeNumber = "71";                   // the number of the Watertown -> Harvard route 
+
+// Read template from file and compile
+const template = pug.compile(fs.readFileSync(__dirname + "/assets/view.pug", {encoding: "utf8"}));
 
 const app = new Koa();
 
@@ -85,9 +89,12 @@ const formatPredictions = (predictions: MbtaPredictionResult, filteredRouteNumbe
 
 
 app.use( async ctx => {
-    const predictions: MbtaPredictionResult = await getPredictions(watertownCoords);    
+    // Get predictions from mbta API and reformat as a list of dates
+    const predictions: MbtaPredictionResult = await getPredictions(watertownCoords);
     const formatedPredictions: string[] = formatPredictions(predictions);
-    ctx.body = formatPredictions(predictions);
+
+    // Read template from file, compile, and inject dates
+    ctx.body = template({dates: formatedPredictions});
 
 })
 
