@@ -23,7 +23,7 @@ export interface MbtaPredictionResult {
     }[]
 }
 
-const MBTA_API_URL = "https://api-v3.mbta.com";
+export const MBTA_API_URL = "https://api-v3.mbta.com";
 
 // Coordinates of Watertown Square (approx.)
 const watertownCoords = {
