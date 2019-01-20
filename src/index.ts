@@ -3,6 +3,7 @@
 import request = require("request-promise");
 import Koa = require("koa");
 import moment = require("moment");
+import jade = require("jade");
 
 export interface MbtaPredictionResult {
     data: {
@@ -21,40 +22,25 @@ export interface MbtaPredictionResult {
     }[]
 }
 
-export interface CensusGeocodingResult {
-    result: {
-        addressMatches: [
-            {
-                matchedAddress: string;
-                coordinates: {
-                    x: number;
-                    y: number;
-                }
-            }
-        ]    
-    }
-}
-
 const MBTA_API_URL = "https://api-v3.mbta.com";
-const CENSUS_API_URL = "https://geocoding.geo.census.gov";
 
-const someAddress = '120 Pleasant St Watertown MA';
-
+// Coordinates of Watertown Square (approx.)
+const watertownCoords = {
+    latitude: "42.36546",
+    longitude: "-71.18564"
+}
 const routeNumber = "71";                   // the number of the Watertown -> Harvard route 
 
 const app = new Koa();
 
 
 const getPredictions = async ( {latitude, longitude}: {latitude: string, longitude: string})  => {
-    return getJson(`${MBTA_API_URL}/predictions?filter[latitude]=${latitude}&filter[longitude]=${longitude}&include=stop,route,trip,schedule`)
+    return getJson<MbtaPredictionResult>(`${MBTA_API_URL}/predictions?filter[latitude]=${latitude}&filter[longitude]=${longitude}&include=stop,route,trip,schedule`)
 }
 
-const getGeocodeData = async (address = someAddress) => { 
-    return getJson(`${CENSUS_API_URL}/geocoder/locations/onelineaddress?address=${encodeURIComponent(address)}&format=json&benchmark=Public_AR_Current`);
-}
 
-const getJson = async (url: string) => {
-    return await request(url, {json: true});
+const getJson = async<T> (url: string) => {
+    return await request(url, {json: true}) as T;
 }
 
 const formatPredictions = (predictions: MbtaPredictionResult, filteredRouteNumber = routeNumber) => {
@@ -99,18 +85,8 @@ const formatPredictions = (predictions: MbtaPredictionResult, filteredRouteNumbe
 
 
 app.use( async ctx => {
-    // First get the lat longitude of Watertown SQ from census data
-    const geoCodeData: CensusGeocodingResult = await getGeocodeData(ctx.query.address);
-
-    if(!geoCodeData.result.addressMatches || !geoCodeData.result.addressMatches.length) {
-        ctx.throw(404, "Could not find address");
-    }
-
-    const latitude = geoCodeData.result.addressMatches[0].coordinates.y.toString();
-    const longitude = geoCodeData.result.addressMatches[0].coordinates.x.toString();
-
-    const predictions: MbtaPredictionResult = await getPredictions({latitude, longitude});    
-    
+    const predictions: MbtaPredictionResult = await getPredictions(watertownCoords);    
+    const formatedPredictions: string[] = formatPredictions(predictions);
     ctx.body = formatPredictions(predictions);
 
 })
